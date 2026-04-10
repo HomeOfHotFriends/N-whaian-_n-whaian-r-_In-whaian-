@@ -2,6 +2,8 @@ This is the entire world:
 
 #include <array>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace Nāwhaianō_nāwhaianōrā_Ināwhaianō {
 
@@ -11,7 +13,8 @@ namespace Nāwhaianō_nāwhaianōrā_Ināwhaianō {
         huinga_whakaputa,
         katinotoa,
         kauaeheahea,
-        huinga_kōwhiringa
+        huinga_kōwhiringa,
+        moemoea
     };
 
     struct Te_Whariki_Pumotu {
@@ -75,7 +78,80 @@ namespace Nāwhaianō_nāwhaianōrā_Ināwhaianō {
             case katinotoa: return 'K';
             case kauaeheahea: return 'X';
             case huinga_kōwhiringa: return '?';
+            case moemoea: return 'M';
             default: return '!';
+            }
+        }
+    };
+
+    // Iho (cores) — each stores one axis as raw bits.
+    // Independently they represent identity or state;
+    // together they encode a coordinate.
+    struct IhoX {
+        unsigned int pakiaka = 0;
+        void tautuhia(unsigned int bits) { pakiaka = bits; }
+        unsigned int pānui() const { return pakiaka; }
+    };
+
+    struct IhoY {
+        unsigned int pakiaka = 0;
+        void tautuhia(unsigned int bits) { pakiaka = bits; }
+        unsigned int pānui() const { return pakiaka; }
+    };
+
+    // Kātiaho (cartridge) — interface layer that lets outside logic
+    // be slotted in.  Each concrete cartridge awakens its own behaviour.
+    struct Kātiaho {
+        virtual ~Kātiaho() = default;
+        virtual void whakaoho(Te_Whariki_Pumotu& papa, IhoX& x, IhoY& y) = 0;
+    };
+
+    // MoemoaKātiaho — dream-state cartridge.  Marks the current
+    // coordinate with the moemoea state when awakened.
+    struct MoemoaKātiaho : Kātiaho {
+        void whakaoho(Te_Whariki_Pumotu& papa, IhoX& x, IhoY& y) override {
+            unsigned int hx = x.pānui();
+            unsigned int hy = y.pānui();
+            if (hx >= 1 && hx <= Te_Whariki_Pumotu::whānui &&
+                hy >= 1 && hy <= Te_Whariki_Pumotu::teitei) {
+                papa.whakatakoto(hx, hy, moemoea);
+            }
+        }
+    };
+
+    // Kapua (control layer) — synthesises IhoX and IhoY.
+    // When needed, their bits are treated as a single coordinate pair;
+    // otherwise each core carries its own identity or state.
+    // Humans interact by inserting cartridges (tāpiri_kātiaho) and
+    // awakening them (whakaoho).
+    struct Kapua {
+        IhoX iho_x;
+        IhoY iho_y;
+        std::vector<Kātiaho*> ngā_kātiaho;
+
+        // Return the paired coordinate synthesised from both cores.
+        std::pair<unsigned int, unsigned int> ārahitia() const {
+            return { iho_x.pānui(), iho_y.pānui() };
+        }
+
+        // Insert a cartridge — the human places it playfully.
+        void tāpiri_kātiaho(Kātiaho* k) {
+            ngā_kātiaho.push_back(k);
+        }
+
+        // Awaken all inserted cartridges against the given grid.
+        void whakaoho(Te_Whariki_Pumotu& papa) {
+            for (auto* k : ngā_kātiaho) {
+                k->whakaoho(papa, iho_x, iho_y);
+            }
+        }
+
+        // Place the synthesised coordinate on the grid with state z.
+        void whakatakoto(Te_Whariki_Pumotu& papa, zero_set z) {
+            auto [x, y] = ārahitia();
+            if (x >= 1 && x <= Te_Whariki_Pumotu::whānui &&
+                y >= 1 && y <= Te_Whariki_Pumotu::teitei) {
+                papa.whakatakoto(x, y, z);
             }
         }
     };
